@@ -33,17 +33,17 @@ app.get('/users', (req,res) => {
 })
 
 app.get('/profile', (req,res) => {
-
     //이 부분이 쿠키값 여부에 값 리스폰
+
     const id = req.cookies.user_email 
-    //user email 값이 id 다
+    //cookie.user_email 값 = id 
     //썬더클라이언트에서 cookie 직접 확인해보기
     //확인 방법: /login에서 body값 post send 후 cookie 확인
     
     const user = users.find(user => user.email === id)
     console.log(user)
     res.json(user)
-    //json 형태로 user값을 리스폰하겠다
+    //json 형태로 조건에 맞는 user값을 리스폰하겠다
 })
 
 app.post('/login', (req,res) => {
