@@ -54,7 +54,7 @@ app.post('/login', (req, res) => {
     const user = `select * from users where email = "${email}" && password = "${password}"`
     connection.query(user, (error, rows, fields) => {
 
-        // console.log(rows[0])
+        console.log(rows[0])
 
         //rows[0]은 시퀄문 조건에서 가져온 값을 변수 user에 넣은 값(req.body.email...)
         //rows는 [{..}] 객체가 들어있는 배열이라서 body에 없는 객체 값을 찍으면 빈 배열값이 찍힘
@@ -63,15 +63,15 @@ app.post('/login', (req, res) => {
         //그러면 아무것도 안나와서 rows[0]은 false가 됨
 
         if (!rows[0]) {
-            return res.status(404).json({ message: '로그인 실패' })
+            return res.status(404).end({ })
         }
 
         // const token = jwt.sign(user, jwtConfig.secretKey, jwtConfig.options)
         const token = jwt.sign({ email: rows[0].email }, jwtConfig.secretKey, jwtConfig.options)
         res.cookie('user_token', token)
-        // res.send(rows[0])
+        res.send(rows[0])
 
-        res.json({ message: '로그인 완료' })
+        // res.json({ message: '로그인 완료' })
 
     })
     // if(!user){
@@ -109,7 +109,7 @@ app.get('/articles', (req, res) => {
                 allPage,
                 lastPage,
                 currentPage
-            }
+            } 
             res.send(aboutPage)
         })
     })
@@ -231,8 +231,6 @@ app.delete('/articles/:id', (req, res) => {
     })
 })
 
-
-
 // const article = articles.find(ar => ar.id === Number(req.params.id))
 // if (!article) {
 //     return res.json({message: '본인이 작성한 글만 삭제 가능'})
@@ -243,8 +241,10 @@ app.delete('/articles/:id', (req, res) => {
 // articles.splice(index, 1)
 // //index 번째 articles에서 index번째 포함 1개 지운다
 
-
-
+app.get("/logout", (req,res) => {
+    res.clearCookie("jwt")
+    res.end()
+})
 
 
 app.listen(7001, () => {
