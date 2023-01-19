@@ -3,10 +3,9 @@ const cookieParser = require('cookie-parser')
 const {jwtConfig, corsOptions} = require('./src/config/configuration')
 const jwt = require('jsonwebtoken')
 const cors = require('cors')
-// const mysql = require('mysql')
 const app = express()
 const {getUserByEmailAndPassword, getUser, getArticle, getArticles} = require('./src/repositories')
-
+//index.js에만 추가 해주면 됨
 
 app.use(cors(corsOptions))
 app.use(express.json())
@@ -49,28 +48,7 @@ app.get('/articles', async (req, res) => {
     const currentPage = page || 1
 
     const articles = await getArticles()
-    res.send(articles)
-
-    // const articlesCount = `select count(*) from Gimin_articles_05`
-    // connection.query(articlesCount, (error, rows, fields) => {
-    //     allPage = rows[0]["count(*)"]
-    //     lastPage = (allPage % perPage) === 0 ? allPage / perPage : (allPage / perPage) + 1
-
-    //     // console.log(allPage)
-    //     // console.log(lastPage)
-    //     // res.send(rows[0])
-
-    //     const articles = `select * from Gimin_articles_05 order by id desc limit ${perPage} offset ${startIndex}`
-    //     connection.query(articles, (error, rows, fields) => {
-    //         const aboutPage = {
-    //             rows,
-    //             allPage,
-    //             lastPage,
-    //             currentPage
-    //         }
-    //         res.send(aboutPage)
-    //     })
-    // })    
+    res.send(articles)  
 })
 
 //게시물 작성
@@ -86,12 +64,6 @@ app.post('/articles', async (req, res) => {
     if (!title || !contents) {
         return res.status(401).end()
     }
-
-    // const post = `insert into Gimin_articles_05(title, contents) values( "${title}", "${contents}")`
-    // connection.query(post, (error, rows, fields) => {
-        // res.json({rows})
-         
-    // })
 
     const a = await getTitleAndContents(email, password)
 
@@ -110,11 +82,6 @@ app.get('/profile', async (req, res) => {
         res.json({ name: rows[0].name, email: rows[0].email })
 
     })
-
-
-    // res.json({ name: rows[0].name, email: rows[0].email })
-    // res.json(verify_user.email)
-    //verify_user값 찍어보기
 })
 
 //게시글 상세조회
@@ -133,14 +100,6 @@ app.get('/articles/:id', async (req, res) => {
     }
     res.send(article) //값 넘기기
 
-
-    // connection.query(post, (error, rows, fields) => {
-
-    //     if (!rows) {
-    //         return res.json({ message: "없는 게시물입니다" })
-    //     }
-    //     res.json(rows[0])
-    // })
 })
 
 //유저정보 하나만 가져오는 api
