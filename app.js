@@ -1,79 +1,36 @@
 const express = require('express')
 const cookieParser = require('cookie-parser')
-// const session = require('express-session')
-const cors = require('cors')
-// const users = require('./DB/user')
-// const articles = require('./DB/Articles')
+const {jwtConfig, corsOptions} = require('./src/config/configuration')
 const jwt = require('jsonwebtoken')
-const mysql = require('mysql')
+const cors = require('cors')
+// const mysql = require('mysql')
 const app = express()
+const {getUserByEmailAndPassword, getUser, getArticle, getArticles} = require('./src/repositories')
 
-//토큰 방법
-const jwtConfig = {
-    secretKey: 'YoUrSeCrEtKeY', // 원하는 시크릿 ㅍ키
-    options: {
-        algorithm: "HS256", // 해시 알고리즘
-        expiresIn: "30m",  // 토큰 유효 기간
-        issuer: "gimin" // 발행자
-    } //토큰을 만들 때만 필요한 옵션(열쇠를 준것)
-}
-
-
-let corsOptions = {
-    origin: 'http://localhost:9001',
-    credentials: true
-}
 
 app.use(cors(corsOptions))
 app.use(express.json())
 app.use(cookieParser())
 
-
-//connection 생성 (mysql과 연결 준비)
-const connection = mysql.createConnection({
-    host: "caredog-test.c0o6spnernvu.ap-northeast-2.rds.amazonaws.com",
-    user: "sparta",
-    password: "tmvkfmxk2022",
-    database: "sparta_backup",
-})
-
-//연결
-connection.connect()
-// console.log(connection)
-
-// database에 있는 articles정보 가져오기
-// connection.query("select * from articles", (error, rows, fields) => {
-//     console.log(rows)
-// })
-
 //로그인
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
     const email = req.body.email
     const password = req.body.password
-    // const user = users.find(user => user.email === email && user.password === password)
-    const user = `select * from users where email = "${email}" && password = "${password}"`
-    connection.query(user, (error, rows, fields) => {
 
-        console.log(rows[0])
+    let user
 
-        //rows[0]은 시퀄문 조건에서 가져온 값을 변수 user에 넣은 값(req.body.email...)
-        //rows는 [{..}] 객체가 들어있는 배열이라서 body에 없는 객체 값을 찍으면 빈 배열값이 찍힘
-        //빈배열도 값이라고 생각해서 true가 되 로그인 실패가 안뜸
-        //그래서 rows[0]으로 객체를 확실하게 찍어줘야함
-        //그러면 아무것도 안나와서 rows[0]은 false가 됨
+    try {
+        user = await getUserByEmailAndPassword(email, password)
+    } catch (e) {
+        res.status(404).json({message: e.message})
+    }
 
-        if (!rows[0]) {
-            return res.status(404).end({ })
-        }
+    const token = jwt.sign({email: a.email}, jwtConfig.secretKey, jwtConfig.options)
+    res.cookie('user_token', token)
+    
+    res.json({ message: '로그인 완료' })
 
-        // const token = jwt.sign(user, jwtConfig.secretKey, jwtConfig.options)
-        const token = jwt.sign({ email: rows[0].email }, jwtConfig.secretKey, jwtConfig.options)
-        res.cookie('user_token', token)
-        res.send(rows[0])
-
-        // res.json({ message: '로그인 완료' })
-
-    })
+    
     // if(!user){
     //     return res.status(404).json({message: '로그인 실패'})
     // }
@@ -84,61 +41,66 @@ app.post('/login', (req, res) => {
 // 쿼리한데 몇개씩 보여줄지 정해야됨 10
 // 위에 두가지를 가지고 시작점이 어딘지
 // ?page=1
-app.get('/articles', (req, res) => {
+app.get('/articles', async (req, res) => {
 
     const { page } = req.query
     const perPage = 5
     const startIndex = ((page || 1) - 1) * perPage
-    //1page면 index0부터 정보 가져옴
-    //2page면 index10부터...
     const currentPage = page || 1
 
-    const articlesCount = `select count(*) from Gimin_articles_05`
-    connection.query(articlesCount, (error, rows, fields) => {
-        allPage = rows[0]["count(*)"]
-        lastPage = (allPage % perPage) === 0 ? allPage / perPage : (allPage / perPage) + 1
+    const articles = await getArticles()
+    res.send(articles)
 
-        // console.log(allPage)
-        // console.log(lastPage)
-        // res.send(rows[0])
+    // const articlesCount = `select count(*) from Gimin_articles_05`
+    // connection.query(articlesCount, (error, rows, fields) => {
+    //     allPage = rows[0]["count(*)"]
+    //     lastPage = (allPage % perPage) === 0 ? allPage / perPage : (allPage / perPage) + 1
 
-        const articles = `select * from Gimin_articles_05 order by id desc limit ${perPage} offset ${startIndex}`
-        connection.query(articles, (error, rows, fields) => {
-            const aboutPage = {
-                rows,
-                allPage,
-                lastPage,
-                currentPage
-            } 
-            res.send(aboutPage)
-        })
-    })
+    //     // console.log(allPage)
+    //     // console.log(lastPage)
+    //     // res.send(rows[0])
+
+    //     const articles = `select * from Gimin_articles_05 order by id desc limit ${perPage} offset ${startIndex}`
+    //     connection.query(articles, (error, rows, fields) => {
+    //         const aboutPage = {
+    //             rows,
+    //             allPage,
+    //             lastPage,
+    //             currentPage
+    //         }
+    //         res.send(aboutPage)
+    //     })
+    // })    
 })
 
 //게시물 작성
-app.post('/articles', (req, res) => {
+app.post('/articles', async (req, res) => {
     //쿠키에 토큰이 없다면
     if (!req.cookies.user_token) {
         return res.json({ message: "로그인하세요" })
     }
 
-    const title = req.body.title
-    const contents = req.body.contents
-    const post = `insert into Gimin_articles_05(title, contents) values( ${title}, ${contents})`
-    connection.query(post, (error, rows, fields) => {
-        // res.status(200).send(rows[0])
-        // res.send(rows)
+    const { title } = req.body
+    const { contents } = req.body
 
-        res.json({ title, contents }) //이거를 저장해서...어떻게 목록에 띄우지??
-    })
-    // res.json({message: '작성 완료'})
-    // articles.push({title, contents})
+    if (!title || !contents) {
+        return res.status(401).end()
+    }
+
+    // const post = `insert into Gimin_articles_05(title, contents) values( "${title}", "${contents}")`
+    // connection.query(post, (error, rows, fields) => {
+        // res.json({rows})
+         
+    // })
+
+    const a = await getTitleAndContents(email, password)
+
+    res.json({rows})
 })
 
 //프로필(유저 정보보기)
-app.get('/profile', (req, res) => {
+app.get('/profile', async (req, res) => {
     const verify_user = jwt.verify(req.cookies.user_token, jwtConfig.secretKey)
-    // const user = users.find(user => user.email === verify_user.email)
     const user = `select * from users where email = "${verify_user.email}"`
     connection.query(user, (error, rows, fields) => {
         if (!rows) {
@@ -148,28 +110,57 @@ app.get('/profile', (req, res) => {
         res.json({ name: rows[0].name, email: rows[0].email })
 
     })
+
+
+    // res.json({ name: rows[0].name, email: rows[0].email })
     // res.json(verify_user.email)
     //verify_user값 찍어보기
 })
 
 //게시글 상세조회
-//게시글이 하나만 나오지 않는 상태
-app.get('/articles/:id', (req, res) => {
+app.get('/articles/:id', async (req, res) => {
     //:id 에 어떤 값이든 들어갈 수 있다
-    const id = Number(req.params.id) //1 params는 문자형으로 들어온다
-    // const post = articles.find(a => a.id === Number(id))
-    const post = `select * from Gimin_articles_05 where id = "${id}"`
-    connection.query(post, (error, rows, fields) => {
+    const id = Number(req.params.id) //params는 문자형으로 들어온다
+    
+    let article = null
+    try{
+        article = await getArticle(id)
+        //getArticle 함수를 호출해서 해당 id의 article를 갖고 와서
+        //article에 넣어주겠다
 
-        if (!rows) {
-            return res.json({ message: "없는 게시물입니다" })
-        }
-        console.log(rows)
+    } catch(e) {
+        res.status(404).json({message: e.message})
+    }
+    res.send(article) //값 넘기기
 
-        res.json(rows[0])
 
-    })
+    // connection.query(post, (error, rows, fields) => {
+
+    //     if (!rows) {
+    //         return res.json({ message: "없는 게시물입니다" })
+    //     }
+    //     res.json(rows[0])
+    // })
 })
+
+//유저정보 하나만 가져오는 api
+app.get('/users/:id', async (req, res) => {
+    //:id 에 어떤 값이든 들어갈 수 있다
+    const id = Number(req.params.id) //params는 문자형으로 들어온다
+    
+    let user = null
+    try{
+        user = await getUser(id)
+        //getUser 함수를 호출해서 해당 id의 user 갖고 와서
+        //user 넣어주겠다
+
+    } catch(e) {
+        res.status(404).json({message: e.message})
+    }
+    res.send(user)
+})
+
+
 
 
 //특정 게시물 하나만 수정
@@ -214,7 +205,6 @@ app.put('/articles/:id', (req, res) => {
 //     console.log(post)
 
 //     res.json({message: '수정 완료'})
-
 // })
 
 //게시물 삭제
@@ -241,11 +231,10 @@ app.delete('/articles/:id', (req, res) => {
 // articles.splice(index, 1)
 // //index 번째 articles에서 index번째 포함 1개 지운다
 
-app.get("/logout", (req,res) => {
+app.get("/logout", (req, res) => {
     res.clearCookie("jwt")
     res.end()
 })
-
 
 app.listen(7001, () => {
     console.log('7001 server')
