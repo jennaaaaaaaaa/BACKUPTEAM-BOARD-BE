@@ -16,7 +16,6 @@ const jwtConfig = {
     } //토큰을 만들 때만 필요한 옵션(열쇠를 준것)
 }
 
-
 let corsOptions = {
     origin: 'http://localhost:9001',
     credentials: true
@@ -94,20 +93,21 @@ app.get('/articles', (req, res) => {
     const articlesCount = `select count(*) from Gimin_articles_05`
     connection.query(articlesCount, (error, rows, fields) => {
         allPage = rows[0]["count(*)"]
-        lastPage = (allPage % perPage) === 0 ? allPage / perPage : (allPage / perPage) + 1
+        lastPage = (allPage % perPage) === 0 ? allPage / perPage : Math.ceil(allPage / perPage)
 
         // console.log(allPage)
         // console.log(lastPage)
         // res.send(rows[0])
 
         const articles = `select * from Gimin_articles_05 order by id desc limit ${perPage} offset ${startIndex}`
+
         connection.query(articles, (error, rows, fields) => {
             const aboutPage = {
                 rows,
                 allPage,
                 lastPage,
                 currentPage
-            } 
+            }
             res.send(aboutPage)
         })
     })
@@ -122,11 +122,15 @@ app.post('/articles', (req, res) => {
 
     const title = req.body.title
     const contents = req.body.contents
-    // const post = `insert into Gimin_articles_05(title, contents) values( ${title}, ${contents})`
-    connection.query(`insert into Gimin_articles_05(title, contents) values( ${title}, ${contents})`, (error, rows, fields) => {
+
+    if(!title || !contents){
+        return res.json({message: ''})
+
+    }
+
+    connection.query(`insert into Gimin_articles_05(title, contents) values( "${title}", "${contents}")`, (error, rows, fields) => {
         // res.status(200).send(rows[0])
         // res.send(rows)
-
         res.json({message: '작성 완료'})
     })
 })
@@ -142,7 +146,6 @@ app.get('/profile', (req, res) => {
         }
 
         res.json({ name: rows[0].name, email: rows[0].email })
-
     })
     // res.json(verify_user.email)
     //verify_user값 찍어보기
