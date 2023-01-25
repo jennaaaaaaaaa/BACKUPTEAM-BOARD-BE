@@ -7,12 +7,12 @@ const { createArticle, deleteArticle, getAticle, getArticles, updateArticle } = 
 //게시글 목록조회
 const postList = async (req, res) => {
     const { page } = req.query
-    const perpage = 10
-    const startindex = ((page || 1) - 1) * perpage
+    const perPage = 10
+    const startindex = ((page || 1) - 1) * perPage
 
-    const [lastPage, articles] = await getArticles(perpage, startindex)
+    const [lastPage, articles] = await getArticles(perPage, startindex)
 
-    res.json({ aboutpage: { perpage, lastPage, currentPage: page || 1 }, articles })
+    res.json({ aboutpage: { perPage, lastPage, currentPage: page || 1 }, articles })
 
 }
 
