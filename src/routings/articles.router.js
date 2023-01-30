@@ -5,7 +5,8 @@ const { postWrite, postList, postDetail, postModify, postDelete } = require('../
 router.post('/write', postWrite)
 router.get('/list', postList)
 router.get('/:id', postDetail)
-router.patch('/:id', postModify)
+router.patch('/:id', postModify, )
 router.delete('/:id', postDelete)
+router.get('/tags/:tagid', postList)
 
 module.exports = router

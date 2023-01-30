@@ -18,4 +18,6 @@ const User = a.define('users', {
     updatedAt: false
 });
 
+
+
 module.exports = {User}
